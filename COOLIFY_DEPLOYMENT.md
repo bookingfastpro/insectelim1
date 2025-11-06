@@ -53,11 +53,15 @@ Puisque vous utilisez **Supabase** pour la base de données, vous n'avez besoin 
    - Dockerfile Location : `./Dockerfile`
    - Port : **80**
 
-4. **Variables d'environnement** (⚠️ Important - définir AVANT le build)
+4. **Variables d'environnement** (⚠️ CRITIQUE - définir AVANT le build)
+
+   Dans Coolify, allez dans **Environment Variables** et ajoutez :
    ```
-   VITE_SUPABASE_URL=https://supabase.hevolife.fr
-   VITE_SUPABASE_ANON_KEY=votre-clé-anon-ici
+   VITE_SUPABASE_URL=https://juqesotdxzoilmpeelgl.supabase.co
+   VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1cWVzb3RkeHpvaWxtcGVlbGdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzODM4NTcsImV4cCI6MjA3Nzk1OTg1N30.LTVRUggT-Pb93KKBIJmTtIpAdhk92vD-0qdMjNWtMOQ
    ```
+
+   ⚠️ **Important** : Ces variables doivent être définies comme **"Build Time Variables"** dans Coolify, pas "Runtime Variables" !
 
 5. **Domaine**
    - Ajoutez votre domaine : `jarvis.hevolife.fr`
