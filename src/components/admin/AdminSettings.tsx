@@ -21,19 +21,31 @@ export default function AdminSettings() {
   }, []);
 
   const loadSettings = async () => {
-    const { data } = await supabase
-      .from('site_settings')
-      .select('*')
-      .in('key', ['contact_info', 'hero_section']);
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('*')
+        .in('key', ['contact_info', 'hero_section']);
 
-    if (data) {
-      data.forEach((setting: SiteSetting) => {
-        if (setting.key === 'contact_info') {
-          setContactInfo(setting.value);
-        } else if (setting.key === 'hero_section') {
-          setHeroSection(setting.value);
-        }
-      });
+      if (error) {
+        console.error('Error loading settings:', error);
+        return;
+      }
+
+      console.log('Loaded settings:', data);
+
+      if (data) {
+        data.forEach((setting: SiteSetting) => {
+          console.log('Processing setting:', setting.key, setting.value);
+          if (setting.key === 'contact_info') {
+            setContactInfo(setting.value);
+          } else if (setting.key === 'hero_section') {
+            setHeroSection(setting.value);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Exception loading settings:', error);
     }
   };
 
