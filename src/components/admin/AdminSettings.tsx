@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
 import { supabase, SiteSetting } from '../../lib/supabase';
+import ImageUploader from '../ImageUploader';
 
 export default function AdminSettings() {
   const [contactInfo, setContactInfo] = useState({
@@ -94,38 +95,11 @@ export default function AdminSettings() {
         <div className="bg-white border border-gray-200 rounded-xl p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Section héro</h3>
           <div className="space-y-4">
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">URL du logo</label>
-              <input
-                type="text"
-                value={heroSection.logo_url}
-                onChange={(e) => setHeroSection({ ...heroSection, logo_url: e.target.value })}
-                placeholder="https://example.com/logo.png ou /image.png"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#27ae60] focus:border-transparent outline-none"
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Collez l'URL complète de l'image ou utilisez /image.png pour l'image locale
-              </p>
-              {heroSection.logo_url && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-2">Aperçu du logo :</p>
-                  <img
-                    src={heroSection.logo_url}
-                    alt="Logo preview"
-                    className="h-32 w-full object-contain rounded-lg border border-gray-200 bg-white"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      target.style.display = 'none';
-                      const errorMsg = target.nextElementSibling as HTMLElement;
-                      if (errorMsg) errorMsg.style.display = 'block';
-                    }}
-                  />
-                  <div className="text-red-600 text-sm mt-2" style={{ display: 'none' }}>
-                    Impossible de charger l'image. Vérifiez l'URL.
-                  </div>
-                </div>
-              )}
-            </div>
+            <ImageUploader
+              currentImageUrl={heroSection.logo_url}
+              onImageUploaded={(url) => setHeroSection({ ...heroSection, logo_url: url })}
+              label="Logo"
+            />
             <div>
               <label className="block text-gray-700 font-medium mb-2">Titre principal</label>
               <input

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
 import { supabase, BlogPost } from '../../lib/supabase';
+import ImageUploader from '../ImageUploader';
 
 export default function AdminBlog() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -172,15 +173,11 @@ export default function AdminBlog() {
               />
             </div>
 
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">URL de l'image</label>
-              <input
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#27ae60] focus:border-transparent outline-none"
-              />
-            </div>
+            <ImageUploader
+              currentImageUrl={formData.image_url}
+              onImageUploaded={(url) => setFormData({ ...formData, image_url: url })}
+              label="Image de l'article"
+            />
 
             <div className="flex items-center gap-2">
               <input

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Eye, EyeOff, MoveUp, MoveDown, FileText } from 'lucide-react';
 import { supabase, Service } from '../../lib/supabase';
+import ImageUploader from '../ImageUploader';
 
 export default function AdminServices() {
   const [services, setServices] = useState<Service[]>([]);
@@ -242,38 +243,11 @@ export default function AdminServices() {
               </select>
             </div>
 
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">URL de l'image</label>
-              <input
-                type="text"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#27ae60] focus:border-transparent outline-none"
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Collez l'URL complète de l'image
-              </p>
-              {formData.image_url && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-2">Aperçu de l'image :</p>
-                  <img
-                    src={formData.image_url}
-                    alt="Preview"
-                    className="h-48 w-full object-cover rounded-lg border border-gray-200"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      target.style.display = 'none';
-                      const errorMsg = target.nextElementSibling as HTMLElement;
-                      if (errorMsg) errorMsg.style.display = 'block';
-                    }}
-                  />
-                  <div className="text-red-600 text-sm mt-2" style={{ display: 'none' }}>
-                    Impossible de charger l'image. Vérifiez l'URL.
-                  </div>
-                </div>
-              )}
-            </div>
+            <ImageUploader
+              currentImageUrl={formData.image_url}
+              onImageUploaded={(url) => setFormData({ ...formData, image_url: url })}
+              label="Image du service"
+            />
 
             <div className="flex items-center gap-2">
               <input
