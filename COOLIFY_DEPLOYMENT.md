@@ -2,7 +2,24 @@
 
 ---
 
-## ⚠️ PROBLÈME COURANT : 404 sur /admin
+## ⚠️ PROBLÈMES COURANTS
+
+### 1. "Docker Compose file not found at: /docker-compose.yaml"
+
+**Cause** : Coolify cherche `/docker-compose.yaml` mais le fichier s'appelle `docker-compose.yml`
+
+**Solution** : N'utilisez PAS Docker Compose ! Utilisez juste le Dockerfile.
+
+**Pourquoi ?** Le docker-compose.yml déploie PostgreSQL + Backend + Frontend, mais vous utilisez déjà Supabase, donc vous n'avez besoin que du **frontend seul**.
+
+✅ **Configuration recommandée dans Coolify** :
+- Type : **"Dockerfile"** (PAS "Docker Compose")
+- Dockerfile path : `./Dockerfile`
+- Port : `80`
+
+---
+
+### 2. 404 sur /admin
 
 Si vous obtenez **"GET https://jarvis.hevolife.fr/admin 404 (Not Found)"**, c'est que votre serveur ne redirige pas correctement les routes SPA vers `index.html`.
 
@@ -17,7 +34,44 @@ Si vous obtenez **"GET https://jarvis.hevolife.fr/admin 404 (Not Found)"**, c'es
 
 ---
 
-## Option 1 : Déploiement avec Docker Compose (Recommandé)
+## ✅ SOLUTION RECOMMANDÉE : Déploiement Frontend seul avec Supabase
+
+Puisque vous utilisez **Supabase** pour la base de données, vous n'avez besoin de déployer que le **frontend**.
+
+### Configuration dans Coolify :
+
+1. **Créez une nouvelle application**
+   - Cliquez sur **"+ New Resource"** ou **"Add"**
+   - Type : **"Application"** → **"Dockerfile"**
+
+2. **Configuration Git**
+   - Connectez votre repository
+   - Branch : `main` (ou votre branche)
+
+3. **Build Configuration**
+   - Build Pack : **"Dockerfile"**
+   - Dockerfile Location : `./Dockerfile`
+   - Port : **80**
+
+4. **Variables d'environnement** (⚠️ Important - définir AVANT le build)
+   ```
+   VITE_SUPABASE_URL=https://supabase.hevolife.fr
+   VITE_SUPABASE_ANON_KEY=votre-clé-anon-ici
+   ```
+
+5. **Domaine**
+   - Ajoutez votre domaine : `jarvis.hevolife.fr`
+   - Activez HTTPS/SSL
+
+6. **Déployez !**
+
+### ⚠️ NE PAS utiliser Docker Compose
+
+Le fichier `docker-compose.yml` déploie PostgreSQL + Backend, mais vous n'en avez pas besoin puisque vous utilisez Supabase.
+
+---
+
+## Option Alternative : Déploiement avec Docker Compose (Non recommandé)
 
 Cette méthode déploie tout (PostgreSQL, Backend, Frontend) en une seule fois.
 
