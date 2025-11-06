@@ -1,112 +1,224 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-let authToken: string | null = localStorage.getItem('auth_token');
-
-export const setAuthToken = (token: string | null) => {
-  authToken = token;
-  if (token) {
-    localStorage.setItem('auth_token', token);
-  } else {
-    localStorage.removeItem('auth_token');
-  }
-};
-
-export const getAuthToken = () => authToken;
-
-const fetchApi = async (endpoint: string, options: RequestInit = {}) => {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
-  }
-
-  return response.json();
-};
+import { supabase } from './supabase';
 
 export const api = {
   auth: {
     login: async (email: string, password: string) => {
-      const data = await fetchApi('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      setAuthToken(data.token);
+
+      if (error) throw error;
       return data;
     },
     register: async (email: string, password: string) => {
-      const data = await fetchApi('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
       });
-      setAuthToken(data.token);
+
+      if (error) throw error;
       return data;
     },
-    logout: () => {
-      setAuthToken(null);
+    logout: async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    },
+    getUser: async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      return user;
     },
   },
   services: {
-    getAll: () => fetchApi('/services'),
-    getById: (id: string) => fetchApi(`/services/${id}`),
-    create: (service: any) => fetchApi('/services', {
-      method: 'POST',
-      body: JSON.stringify(service),
-    }),
-    update: (id: string, service: any) => fetchApi(`/services/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(service),
-    }),
-    delete: (id: string) => fetchApi(`/services/${id}`, {
-      method: 'DELETE',
-    }),
+    getAll: async () => {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('order');
+
+      if (error) throw error;
+      return data;
+    },
+    getById: async (id: string) => {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    getBySlug: async (slug: string) => {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    create: async (service: any) => {
+      const { data, error } = await supabase
+        .from('services')
+        .insert([service])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, service: any) => {
+      const { data, error } = await supabase
+        .from('services')
+        .update(service)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
   },
   blog: {
-    getAll: () => fetchApi('/blog'),
-    getById: (id: string) => fetchApi(`/blog/${id}`),
-    create: (post: any) => fetchApi('/blog', {
-      method: 'POST',
-      body: JSON.stringify(post),
-    }),
-    update: (id: string, post: any) => fetchApi(`/blog/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(post),
-    }),
-    delete: (id: string) => fetchApi(`/blog/${id}`, {
-      method: 'DELETE',
-    }),
+    getAll: async () => {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    getById: async (id: string) => {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    getBySlug: async (slug: string) => {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    create: async (post: any) => {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .insert([post])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, post: any) => {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .update(post)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('blog_posts')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
   },
   messages: {
-    getAll: () => fetchApi('/messages'),
-    create: (message: any) => fetchApi('/messages', {
-      method: 'POST',
-      body: JSON.stringify(message),
-    }),
-    markAsRead: (id: string) => fetchApi(`/messages/${id}/read`, {
-      method: 'PATCH',
-    }),
-    delete: (id: string) => fetchApi(`/messages/${id}`, {
-      method: 'DELETE',
-    }),
+    getAll: async () => {
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    create: async (message: any) => {
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .insert([message])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    markAsRead: async (id: string) => {
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .update({ read: true })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('contact_messages')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
   },
   settings: {
-    getAll: () => fetchApi('/settings'),
-    getByKey: (key: string) => fetchApi(`/settings/${key}`),
-    update: (key: string, value: any) => fetchApi(`/settings/${key}`, {
-      method: 'PUT',
-      body: JSON.stringify({ value }),
-    }),
+    getAll: async () => {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('*');
+
+      if (error) throw error;
+      return data;
+    },
+    getByKey: async (key: string) => {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('*')
+        .eq('key', key)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    update: async (key: string, value: any) => {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .update({ value, updated_at: new Date().toISOString() })
+        .eq('key', key)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
   },
 };

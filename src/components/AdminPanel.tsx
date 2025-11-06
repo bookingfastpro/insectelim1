@@ -11,11 +11,17 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ onLogout }: AdminPanelProps) {
-  const handleLogout = () => {
-    api.auth.logout();
-    onLogout();
-  };
   const [activeTab, setActiveTab] = useState<'blog' | 'services' | 'messages' | 'settings'>('blog');
+
+  const handleLogout = async () => {
+    try {
+      await api.auth.logout();
+      onLogout();
+    } catch (error) {
+      console.error('Logout error:', error);
+      onLogout();
+    }
+  };
 
   const tabs = [
     { id: 'blog' as const, name: 'Articles', icon: FileText },
