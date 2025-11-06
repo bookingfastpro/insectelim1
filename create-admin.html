@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Créer un administrateur INSECTELIM</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #27ae60, #1e8449);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #27ae60;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #333;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    input:focus {
+      outline: none;
+      border-color: #27ae60;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      background: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #229954;
+    }
+    button:disabled {
+      background: #95a5a6;
+      cursor: not-allowed;
+    }
+    .message {
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .info {
+      background: #e8f4f8;
+      color: #31708f;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #27ae60;
+    }
+    .credentials {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ Créer Administrateur INSECTELIM</h1>
+
+    <div class="info">
+      <strong>Information :</strong> Utilisez ce formulaire pour créer votre compte administrateur. Notez bien vos identifiants !
+    </div>
+
+    <form id="createAdminForm">
+      <div class="form-group">
+        <label for="email">Email administrateur</label>
+        <input
+          type="email"
+          id="email"
+          value="admin@insectelim.fr"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input
+          type="password"
+          id="password"
+          value="Insectelim2024!"
+          required
+          minlength="8"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirmer le mot de passe</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          value="Insectelim2024!"
+          required
+          minlength="8"
+        >
+      </div>
+
+      <button type="submit" id="submitBtn">Créer l'administrateur</button>
+    </form>
+
+    <div id="message" class="message"></div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://juqesotdxzoilmpeelgl.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1cWVzb3RkeHpvaWxtcGVlbGdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzODM4NTcsImV4cCI6MjA3Nzk1OTg1N30.LTVRUggT-Pb93KKBIJmTtIpAdhk92vD-0qdMjNWtMOQ';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const form = document.getElementById('createAdminForm');
+    const messageDiv = document.getElementById('message');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (password !== confirmPassword) {
+        showMessage('Les mots de passe ne correspondent pas', 'error');
+        return;
+      }
+
+      if (password.length < 8) {
+        showMessage('Le mot de passe doit contenir au moins 8 caractères', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Création en cours...';
+
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            emailRedirectTo: window.location.origin + '/admin',
+            data: {
+              role: 'admin'
+            }
+          }
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          // Attempt to sign in immediately after signup
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+          });
+
+          if (signInError) {
+            showMessage(
+              `✅ Compte créé avec succès !<br><br>
+              <div class="credentials">
+              <strong>Identifiants :</strong><br>
+              Email : ${email}<br>
+              Mot de passe : ${password}<br><br>
+              <strong>⚠️ Note :</strong> Si la confirmation par email est activée, vérifiez votre boîte mail.<br>
+              Sinon, vous pouvez vous connecter directement à <a href="/admin" style="color: #27ae60; font-weight: bold;">/admin</a>
+              </div>`,
+              'success'
+            );
+          } else {
+            showMessage(
+              `✅ Compte créé et connexion réussie !<br><br>
+              <div class="credentials">
+              <strong>Identifiants :</strong><br>
+              Email : ${email}<br>
+              Mot de passe : ${password}<br><br>
+              <strong>Vous êtes maintenant connecté !</strong>
+              </div><br>
+              <a href="/admin" style="display: inline-block; margin-top: 15px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Accéder au panneau d'administration</a>`,
+              'success'
+            );
+          }
+          form.reset();
+        }
+      } catch (error) {
+        showMessage('❌ Erreur : ' + error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Créer l\'administrateur';
+      }
+    });
+
+    function showMessage(text, type) {
+      messageDiv.innerHTML = text;
+      messageDiv.className = 'message ' + type;
+      messageDiv.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
