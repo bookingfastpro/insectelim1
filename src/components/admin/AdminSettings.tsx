@@ -40,18 +40,34 @@ export default function AdminSettings() {
   const handleSave = async () => {
     setSaveStatus('saving');
 
-    await supabase
-      .from('site_settings')
-      .update({ value: contactInfo, updated_at: new Date().toISOString() })
-      .eq('key', 'contact_info');
+    try {
+      const { error: contactError } = await supabase
+        .from('site_settings')
+        .update({ value: contactInfo, updated_at: new Date().toISOString() })
+        .eq('key', 'contact_info');
 
-    await supabase
-      .from('site_settings')
-      .update({ value: heroSection, updated_at: new Date().toISOString() })
-      .eq('key', 'hero_section');
+      if (contactError) {
+        console.error('Erreur contact_info:', contactError);
+        throw contactError;
+      }
 
-    setSaveStatus('success');
-    setTimeout(() => setSaveStatus('idle'), 2000);
+      const { error: heroError } = await supabase
+        .from('site_settings')
+        .update({ value: heroSection, updated_at: new Date().toISOString() })
+        .eq('key', 'hero_section');
+
+      if (heroError) {
+        console.error('Erreur hero_section:', heroError);
+        throw heroError;
+      }
+
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      setSaveStatus('idle');
+      alert('Erreur lors de la sauvegarde des paramètres');
+    }
   };
 
   return (
