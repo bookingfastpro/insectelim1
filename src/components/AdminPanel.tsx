@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LogOut, FileText, Settings, MessageSquare, Wrench } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import AdminBlog from './admin/AdminBlog';
 import AdminServices from './admin/AdminServices';
 import AdminMessages from './admin/AdminMessages';
@@ -11,6 +11,10 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ onLogout }: AdminPanelProps) {
+  const handleLogout = () => {
+    api.auth.logout();
+    onLogout();
+  };
   const [activeTab, setActiveTab] = useState<'blog' | 'services' | 'messages' | 'settings'>('blog');
 
   const tabs = [
@@ -30,7 +34,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
               <span className="text-sm text-gray-500">Admin</span>
             </div>
             <button
-              onClick={onLogout}
+              onClick={handleLogout}
               className="flex items-center gap-2 text-gray-700 hover:text-[#27ae60] transition-colors"
             >
               <LogOut size={20} />
