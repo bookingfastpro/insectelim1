@@ -1,5 +1,22 @@
 # Guide de déploiement simplifié sur Coolify
 
+---
+
+## ⚠️ PROBLÈME COURANT : 404 sur /admin
+
+Si vous obtenez **"GET https://jarvis.hevolife.fr/admin 404 (Not Found)"**, c'est que votre serveur ne redirige pas correctement les routes SPA vers `index.html`.
+
+### ✅ Solution rapide :
+
+**Si vous utilisez Docker (Dockerfile)** : Votre configuration est déjà correcte ! Assurez-vous que :
+1. Coolify utilise bien le `Dockerfile` pour le build
+2. Le fichier `nginx.conf` est copié (c'est déjà fait dans le Dockerfile)
+3. Le port est configuré sur **80**
+
+**Si vous utilisez "Static Site" ou autre** : Voir la section "Résoudre le 404 sur /admin" ci-dessous.
+
+---
+
 ## Option 1 : Déploiement avec Docker Compose (Recommandé)
 
 Cette méthode déploie tout (PostgreSQL, Backend, Frontend) en une seule fois.
@@ -166,6 +183,86 @@ Récupérez l'URL de connexion : `postgresql://user:pass@host:port/db`
 │   Port 5432                 │
 └─────────────────────────────┘
 ```
+
+---
+
+## 🔧 Résoudre le 404 sur /admin
+
+### Diagnostic
+
+Le problème : votre application React utilise du routage côté client (SPA), mais le serveur ne redirige pas toutes les routes vers `index.html`.
+
+Quand vous allez sur `/admin`, le serveur cherche un fichier `/admin.html` qui n'existe pas, d'où le 404.
+
+### Solution 1 : Utiliser le Dockerfile (Recommandé)
+
+Votre projet a déjà un `Dockerfile` et `nginx.conf` correctement configurés !
+
+**Dans Coolify :**
+
+1. Créez une nouvelle application
+2. Type : **"Dockerfile"** (pas "Static Site")
+3. Dockerfile path : `./Dockerfile`
+4. Port : **80**
+5. Variables d'environnement :
+   ```
+   VITE_SUPABASE_URL=https://supabase.hevolife.fr
+   VITE_SUPABASE_ANON_KEY=votre-anon-key
+   ```
+6. Déployez !
+
+Le `nginx.conf` contient déjà `try_files $uri $uri/ /index.html;` qui gère les routes SPA.
+
+### Solution 2 : Ajouter une configuration Nginx personnalisée
+
+Si vous ne pouvez pas utiliser Docker, ajoutez ceci dans Coolify :
+
+**Settings → Custom Nginx Configuration** :
+
+```nginx
+location / {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+### Solution 3 : Vérifier le fichier _redirects
+
+Le fichier `public/_redirects` existe déjà :
+```
+/*    /index.html   200
+```
+
+Ce fichier est automatiquement copié dans le dossier `dist/` lors du build et fonctionne avec certains hébergeurs (Netlify, Vercel, etc.).
+
+Pour Coolify, assurez-vous qu'il est bien présent dans le dossier de build.
+
+### Tester localement
+
+```bash
+# Build
+npm run build
+
+# Test avec Docker
+docker build -t insectelim .
+docker run -p 8080:80 insectelim
+
+# Testez les routes
+curl -I http://localhost:8080/
+curl -I http://localhost:8080/admin
+curl -I http://localhost:8080/any-route
+
+# Toutes devraient retourner 200
+```
+
+### Checklist de déploiement
+
+- [ ] Type d'application : **Dockerfile** (pas Static Site)
+- [ ] Port configuré : **80**
+- [ ] Variables `VITE_*` définies **avant le build**
+- [ ] `nginx.conf` contient `try_files $uri $uri/ /index.html;`
+- [ ] `public/_redirects` existe
+- [ ] Logs de déploiement : pas d'erreurs
+- [ ] Test manuel : `curl -I https://jarvis.hevolife.fr/admin` retourne 200
 
 ---
 
