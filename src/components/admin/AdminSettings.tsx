@@ -40,34 +40,18 @@ export default function AdminSettings() {
   const handleSave = async () => {
     setSaveStatus('saving');
 
-    try {
-      const { error: contactError } = await supabase
-        .from('site_settings')
-        .update({ value: contactInfo, updated_at: new Date().toISOString() })
-        .eq('key', 'contact_info');
+    await supabase
+      .from('site_settings')
+      .update({ value: contactInfo, updated_at: new Date().toISOString() })
+      .eq('key', 'contact_info');
 
-      if (contactError) {
-        console.error('Error updating contact_info:', contactError);
-        throw contactError;
-      }
+    await supabase
+      .from('site_settings')
+      .update({ value: heroSection, updated_at: new Date().toISOString() })
+      .eq('key', 'hero_section');
 
-      const { error: heroError } = await supabase
-        .from('site_settings')
-        .update({ value: heroSection, updated_at: new Date().toISOString() })
-        .eq('key', 'hero_section');
-
-      if (heroError) {
-        console.error('Error updating hero_section:', heroError);
-        throw heroError;
-      }
-
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('Erreur lors de l\'enregistrement. Vérifiez la console.');
-      setSaveStatus('idle');
-    }
+    setSaveStatus('success');
+    setTimeout(() => setSaveStatus('idle'), 2000);
   };
 
   return (
