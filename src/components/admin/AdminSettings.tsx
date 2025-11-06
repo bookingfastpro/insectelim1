@@ -21,57 +21,19 @@ export default function AdminSettings() {
   }, []);
 
   const loadSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('*');
+    const { data } = await supabase
+      .from('site_settings')
+      .select('*')
+      .in('key', ['contact_info', 'hero_section']);
 
-      if (error) {
-        console.error('Error loading settings:', error);
-        return;
-      }
-
-      console.log('Loaded settings:', data);
-
-      if (data) {
-        const newContactInfo = { ...contactInfo };
-        const newHeroSection = { ...heroSection };
-
-        data.forEach((setting: SiteSetting) => {
-          const value = typeof setting.value === 'string' ? setting.value : '';
-
-          switch (setting.key) {
-            case 'contact_phone':
-              newContactInfo.phone = value;
-              break;
-            case 'contact_email':
-              newContactInfo.email = value;
-              break;
-            case 'contact_address':
-              newContactInfo.address = value;
-              break;
-            case 'contact_hours':
-              newContactInfo.hours = value;
-              break;
-            case 'hero_title':
-              newHeroSection.title = value;
-              break;
-            case 'hero_subtitle':
-              newHeroSection.subtitle = value;
-              break;
-            case 'hero_logo_url':
-              newHeroSection.logo_url = value;
-              break;
-          }
-        });
-
-        setContactInfo(newContactInfo);
-        setHeroSection(newHeroSection);
-        console.log('Contact info loaded:', newContactInfo);
-        console.log('Hero section loaded:', newHeroSection);
-      }
-    } catch (error) {
-      console.error('Exception loading settings:', error);
+    if (data) {
+      data.forEach((setting: SiteSetting) => {
+        if (setting.key === 'contact_info') {
+          setContactInfo(setting.value);
+        } else if (setting.key === 'hero_section') {
+          setHeroSection(setting.value);
+        }
+      });
     }
   };
 
@@ -79,31 +41,24 @@ export default function AdminSettings() {
     setSaveStatus('saving');
 
     try {
-      const updates = [
-        { key: 'contact_phone', value: contactInfo.phone },
-        { key: 'contact_email', value: contactInfo.email },
-        { key: 'contact_address', value: contactInfo.address },
-        { key: 'contact_hours', value: contactInfo.hours },
-        { key: 'hero_title', value: heroSection.title },
-        { key: 'hero_subtitle', value: heroSection.subtitle },
-        { key: 'hero_logo_url', value: heroSection.logo_url },
-      ];
+      const { error: contactError } = await supabase
+        .from('site_settings')
+        .update({ value: contactInfo, updated_at: new Date().toISOString() })
+        .eq('key', 'contact_info');
 
-      for (const update of updates) {
-        const { error } = await supabase
-          .from('site_settings')
-          .upsert({
-            key: update.key,
-            value: update.value,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'key'
-          });
+      if (contactError) {
+        console.error('Error updating contact_info:', contactError);
+        throw contactError;
+      }
 
-        if (error) {
-          console.error(`Error updating ${update.key}:`, error);
-          throw error;
-        }
+      const { error: heroError } = await supabase
+        .from('site_settings')
+        .update({ value: heroSection, updated_at: new Date().toISOString() })
+        .eq('key', 'hero_section');
+
+      if (heroError) {
+        console.error('Error updating hero_section:', heroError);
+        throw heroError;
       }
 
       setSaveStatus('success');
