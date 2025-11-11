@@ -99,7 +99,7 @@ export default function HeroSection() {
                 <img
                   src={logoUrl || 'https://supabase.insectelim.fr/storage/v1/object/public/images/4aqxxpck45u-1762795628761.jpg?auto=compress&cs=tinysrgb&w=800'}
                   alt="Logo INSECTELIM"
-                  className="rounded-2xl w-full h-full object-cover shadow-2xl border border-white/10"
+                  className="rounded-2xl w-full h-full object-cover shadow-2xl border border-white/60"
                 />
               </div>
             </div>
