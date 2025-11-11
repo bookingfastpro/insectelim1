@@ -95,7 +95,7 @@ export default function HeroSection() {
           >
             <div className="relative">
               <div className="absolute inset-0 bg-white/20 backdrop-blur-xl rounded-3xl transform rotate-3"></div>
-              <div className="relative bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/30">
+              <div className="relative bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
                 <img
                   src={logoUrl || 'https://supabase.insectelim.fr/storage/v1/object/public/images/4aqxxpck45u-1762795628761.jpg?auto=compress&cs=tinysrgb&w=800'}
                   alt="Logo INSECTELIM"
