@@ -90,7 +90,7 @@ export default function ContactSection() {
             Contactez-nous
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Besoin d'une intervention rapide ? Nos techniciens sont disponibles 7j/7 dans toute la Corse-du-Sud.
+            Besoin d'une intervention rapide ? Nos techniciens sont disponibles 7j/7 sur toute la Corse-du-Sud.
           </p>
         </div>
 
