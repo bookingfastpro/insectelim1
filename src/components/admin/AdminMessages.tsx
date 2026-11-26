@@ -19,18 +19,23 @@ export default function AdminMessages() {
   };
 
   const toggleRead = async (id: string, currentStatus: boolean) => {
-    await supabase
-      .from('contact_messages')
-      .update({ read: !currentStatus })
-      .eq('id', id);
-
-    loadMessages();
+    // Mise à jour optimiste
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read: !currentStatus } : m)));
+    const { error } = await supabase.from('contact_messages').update({ read: !currentStatus }).eq('id', id);
+    if (error) {
+      alert(`Erreur : ${error.message}`);
+      loadMessages();
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) {
-      await supabase.from('contact_messages').delete().eq('id', id);
-      loadMessages();
+      const { error } = await supabase.from('contact_messages').delete().eq('id', id);
+      if (error) {
+        alert(`Erreur lors de la suppression : ${error.message}`);
+        return;
+      }
+      setMessages((prev) => prev.filter((m) => m.id !== id));
     }
   };
 
@@ -67,10 +72,12 @@ export default function AdminMessages() {
                 message.read ? 'border-gray-200' : 'border-[#27ae60] bg-green-50/30'
               }`}
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-start gap-3">
+              <div className="flex justify-between items-start gap-2 mb-4">
+                <div className="flex items-start gap-3 min-w-0">
                   <button
-                    onClick={() => toggleRead(message.id!, message.read!)}
+                    onClick={() => toggleRead(message.id!, !!message.read)}
+                    title={message.read ? 'Marquer comme non lu' : 'Marquer comme lu'}
+                    aria-label={message.read ? 'Marquer comme non lu' : 'Marquer comme lu'}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     {message.read ? (
@@ -84,13 +91,13 @@ export default function AdminMessages() {
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-1">
                       <a
                         href={`mailto:${message.email}`}
-                        className="hover:text-[#27ae60] transition-colors"
+                        className="hover:text-[#27ae60] transition-colors break-all"
                       >
                         {message.email}
                       </a>
                       {message.phone && (
                         <a
-                          href={`tel:${message.phone}`}
+                          href={`tel:${message.phone.replace(/[^\d+]/g, '')}`}
                           className="flex items-center gap-1 hover:text-[#27ae60] transition-colors"
                         >
                           <Phone size={14} />
@@ -106,6 +113,8 @@ export default function AdminMessages() {
                 </div>
                 <button
                   onClick={() => handleDelete(message.id!)}
+                  title="Supprimer"
+                  aria-label="Supprimer"
                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   <Trash2 size={20} />

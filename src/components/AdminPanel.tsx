@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { LogOut, FileText, Settings, MessageSquare, Wrench } from 'lucide-react';
 import { api } from '../lib/api';
 import AdminBlog from './admin/AdminBlog';
@@ -39,13 +39,23 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
               <h1 className="text-2xl font-bold text-[#27ae60]">INSECTELIM</h1>
               <span className="text-sm text-gray-500">Admin</span>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-gray-700 hover:text-[#27ae60] transition-colors"
-            >
-              <LogOut size={20} />
-              <span>Déconnexion</span>
-            </button>
+            <div className="flex items-center gap-4">
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline text-sm text-gray-500 hover:text-[#27ae60] transition-colors"
+              >
+                Voir le site
+              </a>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-gray-700 hover:text-[#27ae60] transition-colors"
+              >
+                <LogOut size={20} />
+                <span className="hidden sm:inline">Déconnexion</span>
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -53,14 +63,14 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="border-b border-gray-200">
-            <nav className="flex">
+            <nav className="flex overflow-x-auto">
               {tabs.map((tab) => {
                 const IconComponent = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium transition-colors ${
+                    className={`flex items-center gap-2 px-4 sm:px-6 py-4 border-b-2 whitespace-nowrap font-medium transition-colors ${
                       activeTab === tab.id
                         ? 'border-[#27ae60] text-[#27ae60]'
                         : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -74,7 +84,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {activeTab === 'blog' && <AdminBlog />}
             {activeTab === 'services' && <AdminServices />}
             {activeTab === 'messages' && <AdminMessages />}

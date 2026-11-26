@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, Service, BlogPost, ContactMessage } from './supabase';
 
 export const api = {
   auth: {
@@ -60,7 +60,7 @@ export const api = {
       if (error) throw error;
       return data;
     },
-    create: async (service: any) => {
+    create: async (service: Partial<Service>) => {
       const { data, error } = await supabase
         .from('services')
         .insert([service])
@@ -70,7 +70,7 @@ export const api = {
       if (error) throw error;
       return data;
     },
-    update: async (id: string, service: any) => {
+    update: async (id: string, service: Partial<Service>) => {
       const { data, error } = await supabase
         .from('services')
         .update(service)
@@ -120,7 +120,7 @@ export const api = {
       if (error) throw error;
       return data;
     },
-    create: async (post: any) => {
+    create: async (post: Partial<BlogPost>) => {
       const { data, error } = await supabase
         .from('blog_posts')
         .insert([post])
@@ -130,7 +130,7 @@ export const api = {
       if (error) throw error;
       return data;
     },
-    update: async (id: string, post: any) => {
+    update: async (id: string, post: Partial<BlogPost>) => {
       const { data, error } = await supabase
         .from('blog_posts')
         .update(post)
@@ -160,7 +160,7 @@ export const api = {
       if (error) throw error;
       return data;
     },
-    create: async (message: any) => {
+    create: async (message: ContactMessage) => {
       const { data, error } = await supabase
         .from('contact_messages')
         .insert([message])
@@ -209,7 +209,7 @@ export const api = {
       if (error) throw error;
       return data;
     },
-    update: async (key: string, value: any) => {
+    update: async (key: string, value: Record<string, unknown>) => {
       const { data, error } = await supabase
         .from('site_settings')
         .update({ value, updated_at: new Date().toISOString() })

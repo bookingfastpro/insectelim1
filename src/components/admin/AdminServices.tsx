@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Eye, EyeOff, MoveUp, MoveDown, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, MoveUp, MoveDown, FileText, ExternalLink } from 'lucide-react';
 import { supabase, Service } from '../../lib/supabase';
 import ImageUploader from '../ImageUploader';
+import { slugify } from '../../lib/seo';
 
 export default function AdminServices() {
   const [services, setServices] = useState<Service[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [showDetailForm, setShowDetailForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -32,24 +35,40 @@ export default function AdminServices() {
   }, []);
 
   const loadServices = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('services')
       .select('*')
       .order('order');
 
+    if (error) console.error('Erreur chargement services:', error);
     if (data) setServices(data);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+    setFormError('');
 
+    let error;
     if (editingService) {
-      await supabase
+      ({ error } = await supabase
         .from('services')
         .update({ ...formData, updated_at: new Date().toISOString() })
-        .eq('id', editingService.id);
+        .eq('id', editingService.id));
     } else {
-      await supabase.from('services').insert([formData]);
+      // Nouveau service : placé en dernier, avec un slug pour que la page détail fonctionne
+      const baseSlug = slugify(formData.title) || 'service';
+      const taken = new Set(services.map((s) => s.slug));
+      let slug = baseSlug;
+      for (let n = 2; taken.has(slug); n++) slug = `${baseSlug}-${n}`;
+      const maxOrder = services.reduce((max, s) => Math.max(max, s.order ?? 0), -1);
+      ({ error } = await supabase.from('services').insert([{ ...formData, order: maxOrder + 1, slug }]));
+    }
+
+    setSaving(false);
+    if (error) {
+      setFormError(`Erreur lors de l'enregistrement : ${error.message}`);
+      return;
     }
 
     resetForm();
@@ -78,10 +97,12 @@ export default function AdminServices() {
       free_quote: detailFormData.free_quote,
     };
 
-    await supabase
+    setSaving(true);
+    setFormError('');
+    const { error } = await supabase
       .from('services')
       .update({
-        slug: detailFormData.slug,
+        slug: slugify(detailFormData.slug),
         detailed_content: detailFormData.detailed_content,
         pricing_info: pricing_info,
         features: features,
@@ -90,13 +111,24 @@ export default function AdminServices() {
       })
       .eq('id', editingService.id);
 
+    setSaving(false);
+    if (error) {
+      setFormError(
+        error.code === '23505'
+          ? 'Ce slug est déjà utilisé par un autre service.'
+          : `Erreur lors de l'enregistrement : ${error.message}`
+      );
+      return;
+    }
+
     resetDetailForm();
     loadServices();
   };
 
   const handleDelete = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce service ?')) {
-      await supabase.from('services').delete().eq('id', id);
+      const { error } = await supabase.from('services').delete().eq('id', id);
+      if (error) alert(`Erreur lors de la suppression : ${error.message}`);
       loadServices();
     }
   };
@@ -111,8 +143,10 @@ export default function AdminServices() {
       order: service.order,
       active: service.active,
     });
+    setFormError('');
     setShowForm(true);
     setShowDetailForm(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleEditDetail = (service: Service) => {
@@ -127,8 +161,10 @@ export default function AdminServices() {
       features: Array.isArray(service.features) ? service.features.join('\n') : '',
       benefits: Array.isArray(service.benefits) ? service.benefits.join('\n') : '',
     });
+    setFormError('');
     setShowDetailForm(true);
     setShowForm(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const moveService = async (id: string, direction: 'up' | 'down') => {
@@ -141,12 +177,16 @@ export default function AdminServices() {
     const newServices = [...services];
     [newServices[index], newServices[newIndex]] = [newServices[newIndex], newServices[index]];
 
-    for (let i = 0; i < newServices.length; i++) {
-      await supabase
-        .from('services')
-        .update({ order: i })
-        .eq('id', newServices[i].id);
-    }
+    // Affichage immédiat, puis mise à jour en parallèle des seules lignes modifiées
+    setServices(newServices.map((s, i) => ({ ...s, order: i })));
+    const changed = newServices.filter((s, i) => s.order !== i);
+    const results = await Promise.all(
+      changed.map((s) =>
+        supabase.from('services').update({ order: newServices.indexOf(s) }).eq('id', s.id)
+      )
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) alert(`Erreur lors du réordonnancement : ${failed.error.message}`);
 
     loadServices();
   };
@@ -161,6 +201,7 @@ export default function AdminServices() {
       active: true,
     });
     setEditingService(null);
+    setFormError('');
     setShowForm(false);
   };
 
@@ -176,6 +217,7 @@ export default function AdminServices() {
       benefits: '',
     });
     setEditingService(null);
+    setFormError('');
     setShowDetailForm(false);
   };
 
@@ -189,10 +231,17 @@ export default function AdminServices() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Gestion des services</h2>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              resetForm();
+            } else {
+              resetDetailForm();
+              setShowForm(true);
+            }
+          }}
           className="flex items-center gap-2 bg-[#27ae60] text-white px-4 py-2 rounded-lg hover:bg-[#229954] transition-colors"
         >
           <Plus size={20} />
@@ -245,7 +294,7 @@ export default function AdminServices() {
 
             <ImageUploader
               currentImageUrl={formData.image_url}
-              onImageUploaded={(url) => setFormData({ ...formData, image_url: url })}
+              onImageUploaded={(url) => setFormData((prev) => ({ ...prev, image_url: url }))}
               label="Image du service"
             />
 
@@ -262,12 +311,17 @@ export default function AdminServices() {
               </label>
             </div>
 
+            {formError && (
+              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">{formError}</div>
+            )}
+
             <div className="flex gap-4">
               <button
                 type="submit"
-                className="bg-[#27ae60] text-white px-6 py-2 rounded-lg hover:bg-[#229954] transition-colors"
+                disabled={saving}
+                className="bg-[#27ae60] text-white px-6 py-2 rounded-lg hover:bg-[#229954] transition-colors disabled:opacity-50"
               >
-                {editingService ? 'Mettre à jour' : 'Créer'}
+                {saving ? 'Enregistrement...' : editingService ? 'Mettre à jour' : 'Créer'}
               </button>
               <button
                 type="button"
@@ -309,10 +363,10 @@ export default function AdminServices() {
                 value={detailFormData.detailed_content}
                 onChange={(e) => setDetailFormData({ ...detailFormData, detailed_content: e.target.value })}
                 placeholder="# Titre principal&#10;## Sous-titre&#10;### Section&#10;&#10;Paragraphe normal...&#10;&#10;- Liste à puces&#10;- Élément 2"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#27ae60] focus:border-transparent outline-none resize-none font-mono text-sm"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#27ae60] focus:border-transparent outline-none resize-y font-mono text-sm"
               />
               <p className="text-sm text-gray-500 mt-1">
-                Utilisez le format Markdown : # pour titre, ## pour sous-titre, - pour liste
+                Markdown : # titre, ## sous-titre, - liste, **gras**, *italique*, [lien](https://…)
               </p>
             </div>
 
@@ -386,12 +440,17 @@ export default function AdminServices() {
               />
             </div>
 
-            <div className="flex gap-4">
+            {formError && (
+              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">{formError}</div>
+            )}
+
+            <div className="flex flex-wrap gap-4">
               <button
                 type="submit"
-                className="bg-[#27ae60] text-white px-6 py-2 rounded-lg hover:bg-[#229954] transition-colors"
+                disabled={saving}
+                className="bg-[#27ae60] text-white px-6 py-2 rounded-lg hover:bg-[#229954] transition-colors disabled:opacity-50"
               >
-                Enregistrer le contenu détaillé
+                {saving ? 'Enregistrement...' : 'Enregistrer le contenu détaillé'}
               </button>
               <button
                 type="button"
@@ -411,9 +470,9 @@ export default function AdminServices() {
             key={service.id}
             className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow"
           >
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-3 mb-2">
                   <h3 className="text-xl font-bold text-gray-900">{service.title}</h3>
                   {service.active ? (
                     <span className="flex items-center gap-1 text-green-600 text-sm">
@@ -439,9 +498,23 @@ export default function AdminServices() {
                   </p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1">
+                {service.slug && service.active && (
+                  <a
+                    href={`/services/${service.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Voir la page"
+                    aria-label="Voir la page"
+                  >
+                    <ExternalLink size={20} />
+                  </a>
+                )}
                 <button
                   onClick={() => moveService(service.id, 'up')}
+                  title="Monter"
+                  aria-label="Monter"
                   disabled={index === 0}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
@@ -449,6 +522,8 @@ export default function AdminServices() {
                 </button>
                 <button
                   onClick={() => moveService(service.id, 'down')}
+                  title="Descendre"
+                  aria-label="Descendre"
                   disabled={index === services.length - 1}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
@@ -470,6 +545,8 @@ export default function AdminServices() {
                 </button>
                 <button
                   onClick={() => handleDelete(service.id)}
+                  title="Supprimer"
+                  aria-label="Supprimer"
                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   <Trash2 size={20} />

@@ -2,16 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  font-family: 'Poppins', sans-serif;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem; /* hauteur de la barre de navigation fixe */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply font-sans text-gray-900 bg-white antialiased;
+    overflow-x: hidden;
+  }
+
+  img {
+    @apply max-w-full;
+  }
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  overflow-x: hidden;
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(2.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideIn {
@@ -49,13 +65,36 @@ body {
 }
 
 @keyframes shake {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
-  10%, 30%, 50%, 70%, 90% {
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
     transform: translateX(-5px);
   }
-  20%, 40%, 60%, 80% {
+  20%,
+  40%,
+  60%,
+  80% {
     transform: translateX(5px);
+  }
+}
+
+/* Respect des préférences d'accessibilité : pas d'animations superflues */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

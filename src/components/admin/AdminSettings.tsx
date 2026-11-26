@@ -1,79 +1,69 @@
 import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
-import { supabase, SiteSetting } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import { withDefaults } from '../../lib/siteSettings';
 import ImageUploader from '../ImageUploader';
 
+const EMPTY_CONTACT = { phone: '', email: '', address: '', hours: '' };
+const EMPTY_HERO = { title: '', subtitle: '', logo_url: '' };
+
 export default function AdminSettings() {
-  const [contactInfo, setContactInfo] = useState({
-    phone: '',
-    email: '',
-    address: '',
-    hours: '',
-  });
-  const [heroSection, setHeroSection] = useState({
-    title: '',
-    subtitle: '',
-    logo_url: '',
-  });
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success'>('idle');
+  const [contactInfo, setContactInfo] = useState(EMPTY_CONTACT);
+  const [heroSection, setHeroSection] = useState(EMPTY_HERO);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     loadSettings();
   }, []);
 
   const loadSettings = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('site_settings')
-      .select('*')
+      .select('key, value')
       .in('key', ['contact_info', 'hero_section']);
 
-    if (data) {
-      data.forEach((setting: SiteSetting) => {
-        if (setting.key === 'contact_info') {
-          setContactInfo(setting.value);
-        } else if (setting.key === 'hero_section') {
-          setHeroSection(setting.value);
-        }
-      });
+    if (error) {
+      setErrorMessage(`Impossible de charger les paramètres : ${error.message}`);
+      setSaveStatus('error');
+      return;
+    }
+
+    for (const setting of data ?? []) {
+      // withDefaults garantit que tous les champs existent (évite les inputs non contrôlés)
+      if (setting.key === 'contact_info') setContactInfo(withDefaults(EMPTY_CONTACT, setting.value));
+      if (setting.key === 'hero_section') setHeroSection(withDefaults(EMPTY_HERO, setting.value));
     }
   };
 
   const handleSave = async () => {
     setSaveStatus('saving');
+    setErrorMessage('');
 
-    try {
-      const { error: contactError } = await supabase
-        .from('site_settings')
-        .update({ value: contactInfo, updated_at: new Date().toISOString() })
-        .eq('key', 'contact_info');
+    const now = new Date().toISOString();
+    // upsert : crée la ligne si elle n'existe pas encore (update seul ne ferait rien)
+    const { error } = await supabase.from('site_settings').upsert(
+      [
+        { key: 'contact_info', value: contactInfo, updated_at: now },
+        { key: 'hero_section', value: heroSection, updated_at: now },
+      ],
+      { onConflict: 'key' }
+    );
 
-      if (contactError) {
-        console.error('Erreur contact_info:', contactError);
-        throw contactError;
-      }
-
-      const { error: heroError } = await supabase
-        .from('site_settings')
-        .update({ value: heroSection, updated_at: new Date().toISOString() })
-        .eq('key', 'hero_section');
-
-      if (heroError) {
-        console.error('Erreur hero_section:', heroError);
-        throw heroError;
-      }
-
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch (error) {
+    if (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      setSaveStatus('idle');
-      alert('Erreur lors de la sauvegarde des paramètres');
+      setErrorMessage(`Erreur lors de la sauvegarde : ${error.message}`);
+      setSaveStatus('error');
+      return;
     }
+
+    setSaveStatus('success');
+    setTimeout(() => setSaveStatus('idle'), 2500);
   };
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Paramètres du site</h2>
         <button
           onClick={handleSave}
@@ -85,6 +75,10 @@ export default function AdminSettings() {
         </button>
       </div>
 
+      {saveStatus === 'error' && errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl mb-6">{errorMessage}</div>
+      )}
+
       {saveStatus === 'success' && (
         <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl mb-6">
           Paramètres enregistrés avec succès !
@@ -94,6 +88,10 @@ export default function AdminSettings() {
       <div className="space-y-6">
         <div className="bg-white border border-gray-200 rounded-xl p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Section héro</h3>
+          <p className="text-sm text-gray-500 -mt-2 mb-4">
+            Le logo s'affiche à droite de la page d'accueil (écrans larges). Le titre et le sous-titre sont enregistrés
+            mais le texte d'accueil du site est actuellement fixe.
+          </p>
           <div className="space-y-4">
             <ImageUploader
               currentImageUrl={heroSection.logo_url}

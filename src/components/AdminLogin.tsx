@@ -20,8 +20,13 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
     try {
       await api.auth.login(email, password);
       onLoginSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Email ou mot de passe incorrect');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      setError(
+        /invalid login credentials/i.test(message)
+          ? 'Email ou mot de passe incorrect'
+          : message || 'Connexion impossible, veuillez réessayer'
+      );
       setIsLoading(false);
     }
   };
@@ -41,8 +46,10 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Email</label>
+            <label htmlFor="admin-email" className="block text-gray-700 font-medium mb-2">Email</label>
             <input
+              id="admin-email"
+              autoComplete="username"
               type="email"
               required
               value={email}
@@ -53,8 +60,10 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Mot de passe</label>
+            <label htmlFor="admin-password" className="block text-gray-700 font-medium mb-2">Mot de passe</label>
             <input
+              id="admin-password"
+              autoComplete="current-password"
               type="password"
               required
               value={password}

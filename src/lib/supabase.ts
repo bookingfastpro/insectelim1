@@ -3,7 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    'VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY doivent être définis (fichier .env ou variables de build).'
+  );
+}
+
+export const supabase = createClient(
+  supabaseUrl || 'http://localhost:54321',
+  supabaseAnonKey || 'missing-anon-key'
+);
 
 export interface BlogPost {
   id: string;
@@ -18,6 +27,13 @@ export interface BlogPost {
   updated_at: string;
 }
 
+export interface PricingInfo {
+  starting_price?: string;
+  price_range?: string;
+  note?: string;
+  free_quote?: boolean;
+}
+
 export interface Service {
   id: string;
   title: string;
@@ -30,12 +46,7 @@ export interface Service {
   updated_at: string;
   slug?: string;
   detailed_content?: string;
-  pricing_info?: {
-    starting_price?: string;
-    price_range?: string;
-    note?: string;
-    free_quote?: boolean;
-  };
+  pricing_info?: PricingInfo;
   features?: string[];
   benefits?: string[];
 }
@@ -43,7 +54,7 @@ export interface Service {
 export interface SiteSetting {
   id: string;
   key: string;
-  value: any;
+  value: Record<string, unknown>;
   updated_at: string;
 }
 

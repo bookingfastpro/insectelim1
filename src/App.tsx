@@ -1,90 +1,66 @@
-import { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase';
+import { lazy, Suspense, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
 import ServicesSection from './components/ServicesSection';
 import BlogSection from './components/BlogSection';
 import ContactSection from './components/ContactSection';
 import Footer from './components/Footer';
-import AdminLogin from './components/AdminLogin';
-import AdminPanel from './components/AdminPanel';
 import BlogDetail from './components/BlogDetail';
 import ServiceDetail from './components/ServiceDetail';
+import { usePathname, scrollToHash } from './lib/router';
+
+// L'espace d'administration est chargé à la demande : il n'alourdit pas le site public.
+const AdminApp = lazy(() => import('./components/AdminApp'));
+
+function FullScreenLoader() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#27ae60] via-[#229954] to-[#1e8449] flex items-center justify-center">
+      <div className="h-12 w-12 rounded-full border-4 border-white/30 border-t-white animate-spin" role="status" aria-label="Chargement" />
+    </div>
+  );
+}
 
 function App() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [currentBlogSlug, setCurrentBlogSlug] = useState<string | null>(null);
-  const [currentServiceSlug, setCurrentServiceSlug] = useState<string | null>(null);
+  const pathname = usePathname();
 
+  // Au premier chargement, faire défiler vers l'ancre éventuelle (ex: /#contact)
   useEffect(() => {
-    checkAuth();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        (() => {
-          setIsAdmin(!!session?.user);
-        })();
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    if (window.location.hash) scrollToHash(window.location.hash, true);
   }, []);
 
-  const checkAuth = async () => {
-    const { data } = await supabase.auth.getSession();
-    setIsAdmin(!!data.session?.user);
-    setIsCheckingAuth(false);
-  };
+  const normalized = pathname.replace(/\/+$/, '') || '/';
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setIsAdmin(false);
-  };
-
-  if (isCheckingAuth) {
+  if (normalized === '/admin') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#27ae60] via-[#229954] to-[#1e8449] flex items-center justify-center">
-        <div className="text-white text-2xl font-bold">Chargement...</div>
-      </div>
+      <Suspense fallback={<FullScreenLoader />}>
+        <AdminApp />
+      </Suspense>
     );
   }
 
-  if (window.location.pathname === '/admin') {
-    if (isAdmin) {
-      return <AdminPanel onLogout={handleLogout} />;
-    } else {
-      return <AdminLogin onLoginSuccess={() => setIsAdmin(true)} />;
-    }
-  }
+  const serviceMatch = /^\/services\/([^/]+)$/.exec(normalized);
+  const blogMatch = /^\/blog\/([^/]+)$/.exec(normalized);
 
-  if (currentServiceSlug) {
-    return (
-      <div className="min-h-screen">
-        <ServiceDetail slug={currentServiceSlug} onBack={() => setCurrentServiceSlug(null)} />
-        <Footer />
-      </div>
-    );
-  }
-
-  if (currentBlogSlug) {
-    return (
-      <div className="min-h-screen">
-        <BlogDetail slug={currentBlogSlug} onBack={() => setCurrentBlogSlug(null)} />
-        <Footer />
-      </div>
+  let content;
+  if (serviceMatch) {
+    content = <ServiceDetail slug={decodeURIComponent(serviceMatch[1])} />;
+  } else if (blogMatch) {
+    content = <BlogDetail slug={decodeURIComponent(blogMatch[1])} />;
+  } else {
+    content = (
+      <>
+        <HeroSection />
+        <ServicesSection />
+        <BlogSection />
+        <ContactSection />
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <Navbar />
-      <HeroSection />
-      <ServicesSection onServiceClick={(slug) => setCurrentServiceSlug(slug)} />
-      <BlogSection onReadMore={(slug) => setCurrentBlogSlug(slug)} />
-      <ContactSection />
+    <div className="min-h-screen flex flex-col">
+      <Navbar solid={normalized !== '/'} />
+      <main className="flex-1">{content}</main>
       <Footer />
     </div>
   );
